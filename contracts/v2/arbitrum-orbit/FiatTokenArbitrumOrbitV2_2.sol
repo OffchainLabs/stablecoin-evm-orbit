@@ -5,33 +5,63 @@ import { FiatTokenV2_2 } from "../FiatTokenV2_2.sol";
 import { IArbToken } from "../../interface/arbitrum-orbit/IArbToken.sol";
 
 contract FiatTokenArbitrumOrbitV2_2 is FiatTokenV2_2, IArbToken {
-    address public l2Gateway;
-    address public override l1Address;
+    /**
+     * @dev Storage slot with the address of the child chain gateway
+     * This is the keccak-256 hash of "FiatTokenArbitrumOrbitV2_2.l2Gateway.slot" subtracted by 1.
+     */
+    bytes32
+        private constant L2_GATEWAY_SLOT = 0xdbf6298cab77bb44ebfd5abb25ed2538c2a55f7404c47e83e6531361fba28c24;
+
+    /**
+     * @dev Storage slot with the address of the parent chain USDC
+     * This is the keccak-256 hash of "FiatTokenArbitrumOrbitV2_2.l1Address.slot" subtracted by 1.
+     */
+    bytes32
+        private constant L1_ADDRESS_SLOT = 0x54352c0d7cc5793352a36344bfdcdcf68ba6258544ce1aed71f60a74d882c191;
 
     modifier onlyGateway() {
-        require(msg.sender == l2Gateway, "ONLY_GATEWAY");
+        require(msg.sender == l2Gateway(), "ONLY_GATEWAY");
         _;
     }
 
     /**
      * @notice initialize the token
-     * @param l2Gateway_ L2 gateway this token communicates with
-     * @param l1Counterpart_ L1 address of ERC20
+     * @param l2Gateway_ child chain gateway this token communicates with
+     * @param l1Counterpart_ parent chain address of the USDC
      */
-    function initialize_ArbCompatible(
-        address l2Gateway_,
-        address l1Counterpart_
-    ) external {
+    function initializeArbitrumOrbit(address l2Gateway_, address l1Counterpart_)
+        external
+    {
         // initializeV2_2 of FiatTokenV2_2 sets version to 3
         require(_initializedVersion == 3);
         require(l2Gateway_ != address(0), "INVALID_GATEWAY");
-        require(l2Gateway == address(0), "ALREADY_INIT");
-        l2Gateway = l2Gateway_;
-        l1Address = l1Counterpart_;
+        require(l2Gateway() == address(0), "ALREADY_INIT");
+        assembly {
+            sstore(L2_GATEWAY_SLOT, l2Gateway_)
+            sstore(L1_ADDRESS_SLOT, l1Counterpart_)
+        }
     }
 
     /**
-     * @notice Mint tokens on L2. Callable path is L1Gateway depositToken (which handles L1 escrow), which triggers L2Gateway, which calls this
+     * @notice Get the address of the child chain gateway connected to this token
+     */
+    function l2Gateway() public view returns (address _l2Gateway) {
+        assembly {
+            _l2Gateway := sload(L2_GATEWAY_SLOT)
+        }
+    }
+
+    /**
+     * @notice Get the address of the parent chain USDC
+     */
+    function l1Address() public override view returns (address _l1Address) {
+        assembly {
+            _l1Address := sload(L1_ADDRESS_SLOT)
+        }
+    }
+
+    /**
+     * @notice Mint tokens on child chain. Callable path is L1Gateway depositToken (which handles L1 escrow), which triggers L2Gateway, which calls this
      * @param account recipient of tokens
      * @param amount amount of tokens minted
      */
@@ -45,8 +75,8 @@ contract FiatTokenArbitrumOrbitV2_2 is FiatTokenV2_2, IArbToken {
     }
 
     /**
-     * @notice Burn tokens on L2.
-     * @dev only the token bridge can call this
+     * @notice Burn tokens on child chain.
+     * @dev only the token bridge gateway can call this
      * @param account owner of tokens
      * @param amount amount of tokens burnt
      */
