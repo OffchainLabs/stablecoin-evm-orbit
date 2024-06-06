@@ -40,6 +40,7 @@ contract FiatTokenArbitrumOrbitV2_2 is FiatTokenV2_2, IArbToken {
             sstore(L2_GATEWAY_SLOT, l2Gateway_)
             sstore(L1_ADDRESS_SLOT, l1Counterpart_)
         }
+        _setMintAllowanceForGateway(l2Gateway_);
     }
 
     /**
@@ -145,5 +146,15 @@ contract FiatTokenArbitrumOrbitV2_2 is FiatTokenV2_2, IArbToken {
         _setBalance(_account, balance - _amount);
         emit Burn(_account, _amount);
         emit Transfer(_account, address(0), _amount);
+    }
+
+    /**
+     * @notice Give USDC gateway the ability to mint tokens
+     */
+    function _setMintAllowanceForGateway(address gateway) internal {
+        uint256 minterAllowedAmount = type(uint256).max;
+        minters[gateway] = true;
+        minterAllowed[gateway] = minterAllowedAmount;
+        emit MinterConfigured(gateway, minterAllowedAmount);
     }
 }
