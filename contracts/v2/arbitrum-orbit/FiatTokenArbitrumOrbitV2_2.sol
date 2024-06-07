@@ -4,10 +4,21 @@ pragma solidity 0.6.12;
 import { FiatTokenV2_2 } from "../FiatTokenV2_2.sol";
 import { IArbToken } from "../../interface/arbitrum-orbit/IArbToken.sol";
 
+/**
+ * @title Custom extension of USDC to make it usable as bridged USDC on Arbitrum Orbit chain.
+ * @notice Reference to the Circle's Bridged USDC Standard:
+ *         https://github.com/circlefin/stablecoin-evm/blob/master/doc/bridged_USDC_standard.md
+ *
+ * @dev    This contract can be used on new Orbit chains which want to provide USDC
+ *         bridging solution and keep the possibility to upgrade to native USDC at
+ *         some point later.
+ */
 contract FiatTokenArbitrumOrbitV2_2 is FiatTokenV2_2, IArbToken {
     /**
      * @dev Storage slot with the address of the child chain gateway
      * This is the keccak-256 hash of "FiatTokenArbitrumOrbitV2_2.l2Gateway.slot" subtracted by 1.
+     * Slot is hard-coded so that base USDC contracts can be further expanded without the possibility
+     * of slot collision.
      */
     bytes32
         private constant L2_GATEWAY_SLOT = 0xdbf6298cab77bb44ebfd5abb25ed2538c2a55f7404c47e83e6531361fba28c24;
@@ -15,6 +26,8 @@ contract FiatTokenArbitrumOrbitV2_2 is FiatTokenV2_2, IArbToken {
     /**
      * @dev Storage slot with the address of the parent chain USDC
      * This is the keccak-256 hash of "FiatTokenArbitrumOrbitV2_2.l1Address.slot" subtracted by 1.
+     * Slot is hard-coded so that base USDC contracts can be further expanded without the possibility
+     * of slot collision.
      */
     bytes32
         private constant L1_ADDRESS_SLOT = 0x54352c0d7cc5793352a36344bfdcdcf68ba6258544ce1aed71f60a74d882c191;
