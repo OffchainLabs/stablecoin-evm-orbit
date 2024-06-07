@@ -48,6 +48,7 @@ contract FiatTokenArbitrumOrbitV2_2 is FiatTokenV2_2, IArbToken {
         // initializeV2_2 of FiatTokenV2_2 sets version to 3
         require(_initializedVersion == 3);
         require(l2Gateway_ != address(0), "INVALID_GATEWAY");
+        require(l1Counterpart_ != address(0), "INVALID_COUNTERPART");
         require(l2Gateway() == address(0), "ALREADY_INIT");
         assembly {
             sstore(L2_GATEWAY_SLOT, l2Gateway_)
@@ -84,7 +85,7 @@ contract FiatTokenArbitrumOrbitV2_2 is FiatTokenV2_2, IArbToken {
         override
         onlyGateway
     {
-        mint(account, amount);
+        _mint(account, amount);
     }
 
     /**
@@ -103,12 +104,38 @@ contract FiatTokenArbitrumOrbitV2_2 is FiatTokenV2_2, IArbToken {
     }
 
     /**
-     * @notice Allows a minter to burn some of its own tokens.
+     * @dev Function 'mint' in FiatTokenV1 is unaccessible from here in the same call due to being external,
+     *      so minting logic is copied over here into private function.
+     */
+    function _mint(address _to, uint256 _amount)
+        private
+        whenNotPaused
+        onlyMinters
+        notBlacklisted(msg.sender)
+        notBlacklisted(_to)
+        returns (bool)
+    {
+        require(_to != address(0), "FiatToken: mint to the zero address");
+        require(_amount > 0, "FiatToken: mint amount not greater than 0");
+
+        uint256 mintingAllowedAmount = minterAllowed[msg.sender];
+        require(
+            _amount <= mintingAllowedAmount,
+            "FiatToken: mint amount exceeds minterAllowance"
+        );
+
+        totalSupply_ = totalSupply_.add(_amount);
+        _setBalance(_to, _balanceOf(_to).add(_amount));
+        minterAllowed[msg.sender] = mintingAllowedAmount.sub(_amount);
+        emit Mint(msg.sender, _to, _amount);
+        emit Transfer(address(0), _to, _amount);
+        return true;
+    }
+
+    /**
      * @dev Function 'burn' in FiatTokenV1 is unaccessible from here in the same call due to being external,
-     *      and also it operates on msg.sender as burn account. Burn logic is copied over here into private function and burn account is provided.
-     * @dev The caller must be a minter, must not be blacklisted, and the amount to burn
-     * should be less than or equal to the account's balance.
-     * @param _amount the amount of tokens to be burned.
+     *      and also it operates on msg.sender as burn account. Burn logic is copied over here into private
+     *      function and burn account is provided.
      */
     function _burn(address _account, uint256 _amount)
         private
