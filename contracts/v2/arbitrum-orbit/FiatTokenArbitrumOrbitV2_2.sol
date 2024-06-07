@@ -40,7 +40,6 @@ contract FiatTokenArbitrumOrbitV2_2 is FiatTokenV2_2, IArbToken {
             sstore(L2_GATEWAY_SLOT, l2Gateway_)
             sstore(L1_ADDRESS_SLOT, l1Counterpart_)
         }
-        _setMintAllowanceForGateway(l2Gateway_);
     }
 
     /**
@@ -72,7 +71,7 @@ contract FiatTokenArbitrumOrbitV2_2 is FiatTokenV2_2, IArbToken {
         override
         onlyGateway
     {
-        _mint(account, amount);
+        mint(account, amount);
     }
 
     /**
@@ -88,40 +87,6 @@ contract FiatTokenArbitrumOrbitV2_2 is FiatTokenV2_2, IArbToken {
         onlyGateway
     {
         _burn(account, amount);
-    }
-
-    /**
-     * @notice Mints fiat tokens to an address.
-     * @dev Function 'mint' in FiatTokenV1 is unaccessible from here in the same call due to being external,
-     *      so minting logic is copied over here into private function.
-     * @param _to The address that will receive the minted tokens.
-     * @param _amount The amount of tokens to mint. Must be less than or equal
-     * to the minterAllowance of the caller.
-     * @return True if the operation was successful.
-     */
-    function _mint(address _to, uint256 _amount)
-        private
-        whenNotPaused
-        onlyMinters
-        notBlacklisted(msg.sender)
-        notBlacklisted(_to)
-        returns (bool)
-    {
-        require(_to != address(0), "FiatToken: mint to the zero address");
-        require(_amount > 0, "FiatToken: mint amount not greater than 0");
-
-        uint256 mintingAllowedAmount = minterAllowed[msg.sender];
-        require(
-            _amount <= mintingAllowedAmount,
-            "FiatToken: mint amount exceeds minterAllowance"
-        );
-
-        totalSupply_ = totalSupply_.add(_amount);
-        _setBalance(_to, _balanceOf(_to).add(_amount));
-        minterAllowed[msg.sender] = mintingAllowedAmount.sub(_amount);
-        emit Mint(msg.sender, _to, _amount);
-        emit Transfer(address(0), _to, _amount);
-        return true;
     }
 
     /**
@@ -146,15 +111,5 @@ contract FiatTokenArbitrumOrbitV2_2 is FiatTokenV2_2, IArbToken {
         _setBalance(_account, balance.sub(_amount));
         emit Burn(_account, _amount);
         emit Transfer(_account, address(0), _amount);
-    }
-
-    /**
-     * @notice Give USDC gateway the ability to mint tokens
-     */
-    function _setMintAllowanceForGateway(address gateway) internal {
-        uint256 minterAllowedAmount = type(uint256).max;
-        minters[gateway] = true;
-        minterAllowed[gateway] = minterAllowedAmount;
-        emit MinterConfigured(gateway, minterAllowedAmount);
     }
 }
