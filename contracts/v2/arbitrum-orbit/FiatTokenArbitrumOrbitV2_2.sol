@@ -142,8 +142,8 @@ contract FiatTokenArbitrumOrbitV2_2 is FiatTokenV2_2, IArbToken {
         require(_amount > 0, "FiatToken: burn amount not greater than 0");
         require(balance >= _amount, "FiatToken: burn amount exceeds balance");
 
-        totalSupply_ = totalSupply_ - _amount;
-        _setBalance(_account, balance - _amount);
+        totalSupply_ = totalSupply_.sub(_amount);
+        _setBalance(_account, balance.sub(_amount));
         emit Burn(_account, _amount);
         emit Transfer(_account, address(0), _amount);
     }
