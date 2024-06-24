@@ -1,6 +1,6 @@
 {
   "name": "@offchainlabs/stablecoin-evm",
-  "version": "1.0.0-orbit-alpha.1",
+  "version": "1.0.0-orbit-alpha.2",
   "description": "Circle's Stablecoin Smart Contracts on EVM-compatible blockchains",
   "directories": {
     "test": "test"
